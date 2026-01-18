@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小手机模拟器</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 20px;
+        }
+        
+        .phone-container {
+            width: 320px;
+            height: 600px;
+            background: #222;
+            border-radius: 30px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+            border: 10px solid #111;
+        }
+        
+        /* 状态栏 */
+        .status-bar {
+            height: 24px;
+            background: #111;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            font-size: 12px;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .time {
+            font-weight: 600;
+        }
+        
+        /* 屏幕区域 */
+        .screen {
+            height: calc(100% - 24px);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* 锁屏界面 */
+        .lockscreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #1a1a2e, #16213e);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 60px;
+            transition: transform 0.5s ease;
+            z-index: 5;
+        }
+        
+        .lockscreen.hidden {
+            transform: translateY(-100%);
+        }
+        
+        .date-display {
+            font-size: 20px;
+            margin-bottom: 10px;
+            color: #aaa;
+        }
+        
+        .time-display {
+            font-size: 56px;
+            font-weight: 300;
+            margin-bottom: 30px;
+        }
+        
+        .unlock-hint {
+            font-size: 14px;
+            color: #aaa;
+            margin-bottom: 20px;
+            text-align: center;
+            padding: 0 20px;
+        }
+        
+        .unlock-area {
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 40px;
+        }
+        
+        .password-input {
+            width: 200px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 20px;
+            text-align: center;
+            margin-bottom: 15px;
+            letter-spacing: 5px;
+        }
+        
+        .password-input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+            letter-spacing: normal;
+        }
+        
+        .unlock-btn {
+            width: 200px;
+            height: 45px;
+            background: #4a6fa5;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .unlock-btn:hover {
+            background: #5a8bd5;
+        }
+        
+        .error-message {
+            color: #ff6b6b;
+            font-size: 14px;
+            height: 20px;
+            margin-top: 5px;
+            visibility: hidden;
+        }
+        
+        /* 主屏幕 */
+        .homescreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #0f0c29, #302b63, #24243e);
+            padding: 20px;
+            transform: translateY(100%);
+            transition: transform 0.5s ease;
+            overflow-y: auto;
+        }
+        
+        .homescreen.active {
+            transform: translateY(0);
+        }
+        
+        .welcome-text {
+            color: white;
+            font-size: 22px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .apps-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        
+        .app-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .app-icon:hover {
+            transform: scale(1.05);
+        }
+        
+        .app-icon i {
+            font-size: 28px;
+            background: rgba(255, 255, 255, 0.1);
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 15px;
+            margin-bottom: 8px;
+        }
+        
+        .app-name {
+            font-size: 12px;
+        }
+        
+        /* 消息应用界面 */
+        .app-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0d1117;
+            padding-top: 24px;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            z-index: 8;
+        }
+        
+        .app-screen.active {
+            transform: translateX(0);
+        }
+        
+        .app-header {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: #161b22;
+            color: white;
+            border-bottom: 1px solid #30363d;
+        }
+        
+        .back-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            margin-right: 15px;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+        
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .app-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .messages-container {
+            padding: 15px;
+            height: calc(100% - 60px);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            margin-bottom: 15px;
+            border-radius: 18px;
+            font-size: 15px;
+            line-height: 1.4;
+            position: relative;
+            opacity: 0;
+            transform: translateY(10px);
+            animation: messageAppear 0.4s forwards;
+            align-self: flex-end;
+            background: #1f6feb;
+            color: white;
+            border-bottom-right-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        
+        @keyframes messageAppear {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .message-time {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 5px;
+            text-align: right;
+        }
+        
+        /* 备忘录应用界面 */
+        .note-container {
+            padding: 15px;
+            color: white;
+            height: calc(100% - 60px);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .note-title {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #f0f6fc;
+        }
+        
+        .note-editor {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .note-textarea {
+            flex: 1;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            color: #f0f6fc;
+            padding: 15px;
+            font-size: 15px;
+            resize: none;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        .note-textarea:focus {
+            border-color: #1f6feb;
+        }
+        
+        .note-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+        
+        .note-btn {
+            padding: 10px 20px;
+            background: #238636;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .note-btn:hover {
+            background: #2ea043;
+        }
+        
+        .note-btn.secondary {
+            background: #30363d;
+        }
+        
+        .note-btn.secondary:hover {
+            background: #484f58;
+        }
+        
+        .note-placeholder {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #8b949e;
+            text-align: center;
+        }
+        
+        .note-placeholder i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        
+        .note-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .note-item {
+            background: #161b22;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #1f6feb;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .note-item:hover {
+            background: #21262d;
+        }
+        
+        .note-item-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #f0f6fc;
+        }
+        
+        .note-item-content {
+            font-size: 14px;
+            color: #8b949e;
+            line-height: 1.4;
+            max-height: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* 手机细节 */
+        .phone-speaker {
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            z-index: 11;
+        }
+        
+        .phone-button {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 40px;
+            background: #333;
+            border-radius: 50%;
+            z-index: 11;
+        }
+        
+        /* 响应式调整 */
+        @media (max-height: 650px) {
+            .phone-container {
+                transform: scale(0.9);
+            }
+        }
+        
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+        
+        /* 消息输入区域 */
+        .message-input-area {
+            padding: 15px;
+            background: #161b22;
+            border-top: 1px solid #30363d;
+            display: flex;
+        }
+        
+        .message-input {
+            flex: 1;
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 20px;
+            padding: 10px 15px;
+            color: #f0f6fc;
+            font-size: 14px;
+            outline: none;
+        }
+        
+        .send-btn {
+            background: #1f6feb;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            color: white;
+            margin-left: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+        
+        .send-btn:hover {
+            background: #2b81ff;
+        }
+        
+        .send-btn:disabled {
+            background: #30363d;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-container">
+        <div class="phone-speaker"></div>
+        
+        <div class="status-bar">
+            <div class="time" id="current-time">12:00</div>
+            <div class="icons">
+                <i class="fas fa-signal"></i>
+                <i class="fas fa-wifi" style="margin: 0 8px;"></i>
+                <i class="fas fa-battery-three-quarters"></i>
+            </div>
+        </div>
+        
+        <div class="screen">
+            <!-- 锁屏界面 -->
+            <div class="lockscreen" id="lockscreen">
+                <div class="date-display" id="current-date">2023年6月15日 星期四</div>
+                <div class="time-display" id="lock-time">12:00</div>
+                <div class="unlock-hint">密码提示: your lover birthday</div>
+                <div class="unlock-area">
+                    <input type="password" class="password-input" id="password-input" placeholder="输入密码" maxlength="4" inputmode="numeric">
+                    <button class="unlock-btn" id="unlock-btn">解锁</button>
+                    <div class="error-message" id="error-msg">密码错误，请重试</div>
+                </div>
+            </div>
+            
+            <!-- 主屏幕 -->
+            <div class="homescreen" id="homescreen">
+                <div class="welcome-text">欢迎回来！</div>
+                <div class="apps-grid">
+                    <div class="app-icon" data-app="messages">
+                        <i class="fas fa-comment-dots"></i>
+                        <span class="app-name">信息</span>
+                    </div>
+                    <div class="app-icon" data-app="notes">
+                        <i class="fas fa-sticky-note"></i>
+                        <span class="app-name">备忘录</span>
+                    </div>
+                    <div class="app-icon">
+                        <i class="fas fa-phone"></i>
+                        <span class="app-name">电话</span>
+                    </div>
+                    <div class="app-icon">
+                        <i class="fas fa-camera"></i>
+                        <span class="app-name">相机</span>
+                    </div>
+                    <div class="app-icon">
+                        <i class="fas fa-music"></i>
+                        <span class="app-name">音乐</span>
+                    </div>
+                    <div class="app-icon">
+                        <i class="fas fa-cog"></i>
+                        <span class="app-name">设置</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 信息应用 -->
+            <div class="app-screen" id="messages-app">
+                <div class="app-header">
+                    <button class="back-btn" id="back-from-messages">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <div class="app-title">与某人的对话</div>
+                </div>
+                <div class="messages-container" id="messages-container">
+                    <!-- 消息将通过JavaScript动态添加 -->
+                </div>
+                <div class="message-input-area">
+                    <input type="text" class="message-input" id="message-input" placeholder="输入消息...">
+                    <button class="send-btn" id="send-btn">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 备忘录应用 -->
+            <div class="app-screen" id="notes-app">
+                <div class="app-header">
+                    <button class="back-btn" id="back-from-notes">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <div class="app-title">备忘录</div>
+                </div>
+                <div class="note-container">
+                    <div class="note-title">我的备忘录</div>
+                    <div class="note-editor" id="note-editor">
+                        <div class="note-placeholder" id="note-placeholder">
+                            <i class="fas fa-sticky-note"></i>
+                            <p>暂无备忘录，点击下方按钮创建新备忘录</p>
+                        </div>
+                        <div class="note-list" id="note-list" style="display: none;">
+                            <!-- 备忘录列表 -->
+                        </div>
+                        <div class="note-actions">
+                            <button class="note-btn secondary" id="new-note-btn">新建备忘录</button>
+                            <button class="note-btn" id="save-note-btn" style="display: none;">保存</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="phone-button"></div>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const lockscreen = document.getElementById('lockscreen');
+        const homescreen = document.getElementById('homescreen');
+        const passwordInput = document.getElementById('password-input');
+        const unlockBtn = document.getElementById('unlock-btn');
+        const errorMsg = document.getElementById('error-msg');
+        const currentTime = document.getElementById('current-time');
+        const lockTime = document.getElementById('lock-time');
+        const currentDate = document.getElementById('current-date');
+        
+        // 应用相关元素
+        const appIcons = document.querySelectorAll('.app-icon');
+        const messagesApp = document.getElementById('messages-app');
+        const notesApp = document.getElementById('notes-app');
+        const messagesContainer = document.getElementById('messages-container');
+        const backFromMessages = document.getElementById('back-from-messages');
+        const backFromNotes = document.getElementById('back-from-notes');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        
+        // 备忘录相关元素
+        const notePlaceholder = document.getElementById('note-placeholder');
+        const noteList = document.getElementById('note-list');
+        const newNoteBtn = document.getElementById('new-note-btn');
+        const saveNoteBtn = document.getElementById('save-note-btn');
+        const noteEditor = document.getElementById('note-editor');
+        
+        // 定义消息内容
+        const predefinedMessages = [
+            "哦~",
+            "他好我坏",
+            "哼......走开啊",
+            "你和他好去吧",
+            "真走啊",
+            "好了好了，师傅跟你开玩笑的",
+            "真生师傅气了？",
+            "好，是师傅坏",
+            "那坏师傅哄哄你好不好"
+        ];
+        
+        // 正确密码
+        const correctPassword = "0826";
+        
+        // 备忘录数据
+        let notes = [];
+        let currentNoteId = null;
+        
+        // 更新时间和日期
+        function updateDateTime() {
+            const now = new Date();
+            
+            // 格式化时间
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const timeString = `${hours}:${minutes}`;
+            
+            // 更新锁屏和状态栏时间
+            currentTime.textContent = timeString;
+            lockTime.textContent = timeString;
+            
+            // 格式化日期
+            const year = now.getFullYear();
+            const month = now.getMonth() + 1;
+            const day = now.getDate();
+            const weekdays = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+            const weekday = weekdays[now.getDay()];
+            const dateString = `${year}年${month}月${day}日 ${weekday}`;
+            
+            currentDate.textContent = dateString;
+        }
+        
+        // 初始化时间
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+        
+        // 解锁功能
+        unlockBtn.addEventListener('click', unlockPhone);
+        passwordInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                unlockPhone();
+            }
+        });
+        
+        function unlockPhone() {
+            const inputPassword = passwordInput.value;
+            
+            if (inputPassword === correctPassword) {
+                // 解锁成功
+                lockscreen.classList.add('hidden');
+                homescreen.classList.add('active');
+                passwordInput.value = '';
+                errorMsg.style.visibility = 'hidden';
+            } else {
+                // 密码错误
+                errorMsg.style.visibility = 'visible';
+                passwordInput.value = '';
+                passwordInput.focus();
+                
+                // 添加震动效果
+                lockscreen.style.animation = 'shake 0.5s';
+                setTimeout(() => {
+                    lockscreen.style.animation = '';
+                }, 500);
+            }
+        }
+        
+        // 为应用图标添加点击事件
+        appIcons.forEach(icon => {
+            icon.addEventListener('click', function() {
+                const app = this.getAttribute('data-app');
+                
+                if (app === 'messages') {
+                    // 打开消息应用
+                    homescreen.classList.remove('active');
+                    messagesApp.classList.add('active');
+                    
+                    // 显示消息
+                    displayMessages();
+                } else if (app === 'notes') {
+                    // 打开备忘录应用
+                    homescreen.classList.remove('active');
+                    notesApp.classList.add('active');
+                    
+                    // 显示备忘录
+                    displayNotes();
+                } else {
+                    // 其他应用暂时没有功能
+                    alert('该应用正在开发中...');
+                }
+            });
+        });
+        
+        // 显示消息 - 逐条显示
+        function displayMessages() {
+            messagesContainer.innerHTML = '';
+            
+            // 禁用发送按钮，直到所有消息显示完毕
+            sendBtn.disabled = true;
+            
+            // 逐条显示预定义消息
+            predefinedMessages.forEach((message, index) => {
+                setTimeout(() => {
+                    addMessageToChat(message);
+                    
+                    // 如果是最后一条消息，启用发送按钮
+                    if (index === predefinedMessages.length - 1) {
+                        sendBtn.disabled = false;
+                    }
+                }, index * 800); // 每条消息间隔800毫秒
+            });
+            
+            // 滚动到底部
+            setTimeout(() => {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }, predefinedMessages.length * 800);
+        }
+        
+        // 添加消息到聊天界面
+        function addMessageToChat(message) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+            
+            // 获取当前时间
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const timeString = `${hours}:${minutes}`;
+            
+            // 设置消息内容
+            messageElement.innerHTML = `
+                <div>${message}</div>
+                <div class="message-time">${timeString}</div>
+            `;
+            
+            messagesContainer.appendChild(messageElement);
+            
+            // 滚动到底部
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        // 发送新消息
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message) {
+                addMessageToChat(message);
+                messageInput.value = '';
+                messageInput.focus();
+            }
+        }
+        
+        // 备忘录功能
+        function displayNotes() {
+            if (notes.length === 0) {
+                notePlaceholder.style.display = 'flex';
+                noteList.style.display = 'none';
+                saveNoteBtn.style.display = 'none';
+            } else {
+                notePlaceholder.style.display = 'none';
+                noteList.style.display = 'block';
+                saveNoteBtn.style.display = 'none';
+                
+                noteList.innerHTML = '';
+                notes.forEach((note, index) => {
+                    const noteItem = document.createElement('div');
+                    noteItem.classList.add('note-item');
+                    noteItem.setAttribute('data-id', index);
+                    
+                    noteItem.innerHTML = `
+                        <div class="note-item-title">${note.title || '无标题'}</div>
+                        <div class="note-item-content">${note.content || ''}</div>
+                    `;
+                    
+                    noteItem.addEventListener('click', function() {
+                        editNote(index);
+                    });
+                    
+                    noteList.appendChild(noteItem);
+                });
+            }
+        }
+        
+        function createNewNote() {
+            notePlaceholder.style.display = 'none';
+            noteList.style.display = 'none';
+            saveNoteBtn.style.display = 'block';
+            
+            // 创建编辑区域
+            const editorArea = document.createElement('div');
+            editorArea.id = 'editor-area';
+            editorArea.innerHTML = `
+                <input type="text" id="note-title-input" class="note-textarea" placeholder="标题" style="height: 50px; margin-bottom: 10px;">
+                <textarea id="note-content-input" class="note-textarea" placeholder="输入备忘录内容..."></textarea>
+            `;
+            
+            // 清除之前的编辑区域
+            const existingEditor = document.getElementById('editor-area');
+            if (existingEditor) {
+                existingEditor.remove();
+            }
+            
+            // 插入到操作按钮之前
+            noteEditor.insertBefore(editorArea, noteEditor.querySelector('.note-actions'));
+            
+            // 聚焦到标题输入框
+            document.getElementById('note-title-input').focus();
+            
+            currentNoteId = null;
+        }
+        
+        function editNote(id) {
+            notePlaceholder.style.display = 'none';
+            noteList.style.display = 'none';
+            saveNoteBtn.style.display = 'block';
+            
+            // 创建编辑区域
+            const editorArea = document.createElement('div');
+            editorArea.id = 'editor-area';
+            editorArea.innerHTML = `
+                <input type="text" id="note-title-input" class="note-textarea" placeholder="标题" style="height: 50px; margin-bottom: 10px;" value="${notes[id].title || ''}">
+                <textarea id="note-content-input" class="note-textarea" placeholder="输入备忘录内容...">${notes[id].content || ''}</textarea>
+            `;
+            
+            // 清除之前的编辑区域
+            const existingEditor = document.getElementById('editor-area');
+            if (existingEditor) {
+                existingEditor.remove();
+            }
+            
+            // 插入到操作按钮之前
+            noteEditor.insertBefore(editorArea, noteEditor.querySelector('.note-actions'));
+            
+            currentNoteId = id;
+        }
+        
+        function saveNote() {
+            const titleInput = document.getElementById('note-title-input');
+            const contentInput = document.getElementById('note-content-input');
+            
+            const title = titleInput.value.trim();
+            const content = contentInput.value.trim();
+            
+            if (currentNoteId === null) {
+                // 新建备忘录
+                notes.push({
+                    title: title || '无标题',
+                    content: content,
+                    date: new Date().toLocaleString()
+                });
+            } else {
+                // 更新现有备忘录
+                notes[currentNoteId] = {
+                    title: title || '无标题',
+                    content: content,
+                    date: new Date().toLocaleString()
+                };
+            }
+            
+            // 显示备忘录列表
+            displayNotes();
+            
+            // 清除编辑区域
+            const editorArea = document.getElementById('editor-area');
+            if (editorArea) {
+                editorArea.remove();
+            }
+        }
+        
+        // 备忘录按钮事件
+        newNoteBtn.addEventListener('click', createNewNote);
+        saveNoteBtn.addEventListener('click', saveNote);
+        
+        // 返回按钮功能
+        backFromMessages.addEventListener('click', function() {
+            messagesApp.classList.remove('active');
+            homescreen.classList.add('active');
+        });
+        
+        backFromNotes.addEventListener('click', function() {
+            notesApp.classList.remove('active');
+            homescreen.classList.add('active');
+        });
+        
+        // 添加震动动画
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes shake {
+                0%, 100% { transform: translateY(0); }
+                10%, 30%, 50%, 70%, 90% { transform: translateY(-5px); }
+                20%, 40%, 60%, 80% { transform: translateY(5px); }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // 初始显示一条提示
+        setTimeout(() => {
+            alert("提示：密码是 0826 (你爱人的生日)");
+        }, 1000);
+    </script>
+</body>
+</html>
